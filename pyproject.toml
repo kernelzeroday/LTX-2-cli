@@ -1,3 +1,13 @@
+[project]
+name = "ltx-2-cli"
+version = "1.0.0"
+description = "LTX-2 video generation CLI (wrapper for ltx-pipelines)"
+requires-python = ">=3.10"
+dependencies = ["ltx-pipelines"]
+
+[project.scripts]
+ltx = "ltx_pipelines.cli:main"
+
 [tool.uv.sources]
 ltx-core = { workspace = true }
 ltx-pipelines = { workspace = true }
@@ -15,6 +25,12 @@ dev = [
     "ruff>=0.14.3",
     "pytest~=9.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/ltx-pipelines/tests"]
+addopts = "-vv --tb=short --maxfail=1"
+filterwarnings = ["error", "always"]
+markers = ["integration: CLI/integration tests that run the ltx command (deselect with -m 'not integration')"]
 
 [tool.ruff]
 target-version = "py311"

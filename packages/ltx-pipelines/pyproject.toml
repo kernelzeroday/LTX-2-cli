@@ -4,7 +4,18 @@ version = "1.0.0"
 description = "Pipelines implementation for Lightricks' LTX-2 model"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["ltx-core", "av", "tqdm", "pillow"]
+dependencies = [
+    "ltx-core",
+    "av",
+    "tqdm",
+    "pillow",
+    "huggingface-hub",
+    "pyyaml",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.scripts]
+ltx = "ltx_pipelines.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.9.8,<0.10.0"]

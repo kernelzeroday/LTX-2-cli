@@ -37,7 +37,20 @@ pip install -e packages/ltx-pipelines
 
 ### Running Pipelines
 
-All pipelines can be run directly from the command line. Each pipeline module is executable:
+**Unified CLI (recommended):** Install with `uv tool install .` (from this package dir) or `uv tool install ./packages/ltx-pipelines` (from repo root). Then use the `ltx` command with subcommands. Model paths can be local or HuggingFace repo IDs (e.g. `Lightricks/LTX-2:ltx-2-19b-dev-fp8.safetensors`). Use `--config path/to.yaml` for optional config; CLI args override config.
+
+```bash
+ltx two-stages --checkpoint-path Lightricks/LTX-2:ltx-2-19b-dev-fp8.safetensors \
+  --gemma-root google/gemma-3-12b-it-qat-q4_0-unquantized \
+  --distilled-lora Lightricks/LTX-2:ltx-2-19b-distilled-lora-384.safetensors \
+  --spatial-upsampler-path Lightricks/LTX-2:ltx-2-spatial-upscaler-x2-1.0.safetensors \
+  --prompt "A beautiful sunset over the ocean" --output-path output.mp4
+
+ltx one-stage --help
+ltx distilled --help
+```
+
+**Module entry points:** Each pipeline can also be run as a Python module (local paths only):
 
 ```bash
 # Run a pipeline (example: two-stage text-to-video)
@@ -53,15 +66,15 @@ python -m ltx_pipelines.ti2vid_two_stages \
 python -m ltx_pipelines.ti2vid_two_stages --help
 ```
 
-Available pipeline modules:
+Available pipeline modules (and `ltx` subcommands): `one-stage`, `two-stages`, `distilled`, `ic-lora`, `keyframe-interp`.
 
-- `ltx_pipelines.ti2vid_two_stages` - Two-stage text/image-to-video (recommended).
-- `ltx_pipelines.ti2vid_one_stage` - Single-stage text/image-to-video.
-- `ltx_pipelines.distilled` - Fast text/image-to-video pipeline using only the distilled model.
-- `ltx_pipelines.ic_lora` - Video-to-video with IC-LoRA.
-- `ltx_pipelines.keyframe_interpolation` - Keyframe interpolation.
+- `ltx_pipelines.ti2vid_two_stages` / `ltx two-stages` - Two-stage text/image-to-video (recommended).
+- `ltx_pipelines.ti2vid_one_stage` / `ltx one-stage` - Single-stage text/image-to-video.
+- `ltx_pipelines.distilled` / `ltx distilled` - Fast text/image-to-video pipeline using only the distilled model.
+- `ltx_pipelines.ic_lora` / `ltx ic-lora` - Video-to-video with IC-LoRA.
+- `ltx_pipelines.keyframe_interpolation` / `ltx keyframe-interp` - Keyframe interpolation.
 
-Use `--help` with any pipeline module to see all available options and parameters.
+Use `--help` with any pipeline module or `ltx <subcommand> --help` to see all options and parameters.
 
 ---
 

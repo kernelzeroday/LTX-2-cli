@@ -68,6 +68,58 @@ Download the following models from the [LTX-2 HuggingFace repository](https://hu
 * **[ICLoraPipeline](packages/ltx-pipelines/src/ltx_pipelines/ic_lora.py)** - Video-to-video and image-to-video transformations
 * **[KeyframeInterpolationPipeline](packages/ltx-pipelines/src/ltx_pipelines/keyframe_interpolation.py)** - Interpolate between keyframe images
 
+### Command-line interface (CLI)
+
+Install the `ltx` CLI so you can run pipelines from the shell (and from automation/agents):
+
+```bash
+# From repository root (installs ltx-2-cli and ltx-pipelines)
+uv tool install .
+
+# Or install only the pipelines package
+uv tool install ./packages/ltx-pipelines
+```
+
+Model paths can be **local paths** or **HuggingFace repo IDs**. The CLI uses the Hugging Face cache (`HF_HOME` / default cache) so downloads are shared with `huggingface-cli` and other tools.
+
+- **Full repo (e.g. Gemma):** `--gemma-root google/gemma-3-12b-it-qat-q4_0-unquantized`
+- **Single file:** `--checkpoint-path Lightricks/LTX-2:ltx-2-19b-dev-fp8.safetensors`
+
+Optional **config file** (YAML or TOML): pass `--config path/to/config.yaml`. Keys match CLI option names (use underscores, e.g. `checkpoint_path`, `prompt`). CLI arguments override config.
+
+**Examples (replace repo/paths and prompt as needed):**
+
+```bash
+# One-stage text-to-video (single stage, no upsampling)
+ltx one-stage \
+  --checkpoint-path Lightricks/LTX-2:ltx-2-19b-dev-fp8.safetensors \
+  --gemma-root google/gemma-3-12b-it-qat-q4_0-unquantized \
+  --prompt "A cat playing with a ball" \
+  --output-path out.mp4
+
+# Two-stage text-to-video (recommended quality)
+ltx two-stages \
+  --checkpoint-path Lightricks/LTX-2:ltx-2-19b-dev-fp8.safetensors \
+  --gemma-root google/gemma-3-12b-it-qat-q4_0-unquantized \
+  --distilled-lora Lightricks/LTX-2:ltx-2-19b-distilled-lora-384.safetensors \
+  --spatial-upsampler-path Lightricks/LTX-2:ltx-2-spatial-upscaler-x2-1.0.safetensors \
+  --prompt "A cat playing with a ball" \
+  --output-path out.mp4
+
+# Distilled (fastest)
+ltx distilled \
+  --checkpoint-path Lightricks/LTX-2:ltx-2-19b-distilled-fp8.safetensors \
+  --gemma-root google/gemma-3-12b-it-qat-q4_0-unquantized \
+  --spatial-upsampler-path Lightricks/LTX-2:ltx-2-spatial-upscaler-x2-1.0.safetensors \
+  --prompt "A cat playing with a ball" \
+  --output-path out.mp4
+
+# With config file
+ltx --config my_config.yaml one-stage --prompt "A sunset" --output-path out.mp4
+```
+
+Run `ltx --help` and `ltx one-stage --help` (and similarly for other subcommands) for all options.
+
 ### ⚡ Optimization Tips
 
 * **Use DistilledPipeline** - Fastest inference with only 8 predefined sigmas (8 steps stage 1, 4 steps stage 2)
@@ -108,6 +160,10 @@ This repository is organized as a monorepo with three main packages:
 * **[ltx-trainer](packages/ltx-trainer/)** - Training and fine-tuning tools for LoRA, full fine-tuning, and IC-LoRA
 
 Each package has its own README and documentation. See the [Documentation](#-documentation) section below.
+
+## Testing
+
+See [TESTING.md](TESTING.md) for how to run unit and CLI integration tests. From the repo root: `uv run pytest packages/ltx-pipelines/tests/ -m "not integration" -vv --tb=short --maxfail=1` runs unit tests only (no GPU or models required).
 
 ## 📚 Documentation
 

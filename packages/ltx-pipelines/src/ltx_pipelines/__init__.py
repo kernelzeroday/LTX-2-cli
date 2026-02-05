@@ -11,12 +11,6 @@ For more detailed components and utilities, import from specific submodules
 like `ltx_pipelines.utils.media_io` or `ltx_pipelines.utils.constants`.
 """
 
-from ltx_pipelines.distilled import DistilledPipeline
-from ltx_pipelines.ic_lora import ICLoraPipeline
-from ltx_pipelines.keyframe_interpolation import KeyframeInterpolationPipeline
-from ltx_pipelines.ti2vid_one_stage import TI2VidOneStagePipeline
-from ltx_pipelines.ti2vid_two_stages import TI2VidTwoStagesPipeline
-
 __all__ = [
     "DistilledPipeline",
     "ICLoraPipeline",
@@ -24,3 +18,22 @@ __all__ = [
     "TI2VidOneStagePipeline",
     "TI2VidTwoStagesPipeline",
 ]
+
+
+def __getattr__(name: str):  # noqa: N807
+    if name == "DistilledPipeline":
+        from ltx_pipelines.distilled import DistilledPipeline
+        return DistilledPipeline
+    if name == "ICLoraPipeline":
+        from ltx_pipelines.ic_lora import ICLoraPipeline
+        return ICLoraPipeline
+    if name == "KeyframeInterpolationPipeline":
+        from ltx_pipelines.keyframe_interpolation import KeyframeInterpolationPipeline
+        return KeyframeInterpolationPipeline
+    if name == "TI2VidOneStagePipeline":
+        from ltx_pipelines.ti2vid_one_stage import TI2VidOneStagePipeline
+        return TI2VidOneStagePipeline
+    if name == "TI2VidTwoStagesPipeline":
+        from ltx_pipelines.ti2vid_two_stages import TI2VidTwoStagesPipeline
+        return TI2VidTwoStagesPipeline
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -52,6 +52,10 @@ class ImageAction(argparse.Action):
 
 
 class LoraAction(argparse.Action):
+    def __init__(self, **kwargs: object) -> None:
+        self._use_raw_path = bool(kwargs.pop("use_raw_path", False))
+        super().__init__(**kwargs)
+
     def __call__(
         self,
         parser: argparse.ArgumentParser,  # noqa: ARG002
@@ -66,7 +70,7 @@ class LoraAction(argparse.Action):
         path = values[0]
         strength_str = values[1] if len(values) > 1 else str(DEFAULT_LORA_STRENGTH)
 
-        resolved_path = resolve_path(path)
+        resolved_path = path if self._use_raw_path else resolve_path(path)
         strength = float(strength_str)
 
         current = getattr(namespace, self.dest) or []
@@ -78,19 +82,20 @@ def resolve_path(path: str) -> str:
     return str(Path(path).expanduser().resolve().as_posix())
 
 
-def basic_arg_parser() -> argparse.ArgumentParser:
+def basic_arg_parser(cli_model_paths_raw: bool = False) -> argparse.ArgumentParser:
+    path_type: object = str if cli_model_paths_raw else resolve_path
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--checkpoint-path",
-        type=resolve_path,
+        type=path_type,
         required=True,
-        help="Path to LTX-2 model checkpoint (.safetensors file).",
+        help="LTX-2 checkpoint: local path or HuggingFace repo (e.g. repo_id or repo_id:filename).",
     )
     parser.add_argument(
         "--gemma-root",
-        type=resolve_path,
+        type=path_type,
         required=True,
-        help="Path to the root directory containing the Gemma text encoder model files.",
+        help="Path to the root directory containing the Gemma text encoder model files or HuggingFace repo ID.",
     )
     parser.add_argument(
         "--prompt",
@@ -102,7 +107,7 @@ def basic_arg_parser() -> argparse.ArgumentParser:
         "--output-path",
         type=resolve_path,
         required=True,
-        help="Path to the output video file (MP4 format).",
+        help="Path to the output video file (MP4 format). Local path only.",
     )
     parser.add_argument(
         "--seed",
@@ -165,7 +170,8 @@ def basic_arg_parser() -> argparse.ArgumentParser:
         "--lora",
         dest="lora",
         action=LoraAction,
-        nargs="+",  # Accept 1-2 arguments per use (path and optional strength); validation is handled in LoraAction
+        use_raw_path=cli_model_paths_raw,
+        nargs="+",
         metavar=("PATH", "STRENGTH"),
         default=[],
         help=(
@@ -184,8 +190,8 @@ def basic_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def default_1_stage_arg_parser() -> argparse.ArgumentParser:
-    parser = basic_arg_parser()
+def default_1_stage_arg_parser(cli_model_paths_raw: bool = False) -> argparse.ArgumentParser:
+    parser = basic_arg_parser(cli_model_paths_raw=cli_model_paths_raw)
     parser.add_argument(
         "--negative-prompt",
         type=str,
@@ -251,7 +257,7 @@ def default_1_stage_arg_parser() -> argparse.ArgumentParser:
         default=DEFAULT_VIDEO_GUIDER_PARAMS.skip_step,
         help=(
             "Video skip step N controls periodic skipping during the video diffusion process: "
-            "only steps where step_index % (N + 1) == 0 are processed, all others are skipped "
+            "only steps where step_index %% (N + 1) == 0 are processed, all others are skipped "
             f"(e.g., 0 = no skipping; 1 = skip every other step; 2 = skip 2 of every 3 steps; "
             f"default: {DEFAULT_VIDEO_GUIDER_PARAMS.skip_step})."
         ),
@@ -311,7 +317,7 @@ def default_1_stage_arg_parser() -> argparse.ArgumentParser:
         default=DEFAULT_AUDIO_GUIDER_PARAMS.skip_step,
         help=(
             "Audio skip step N controls periodic skipping during the audio diffusion process: "
-            "only steps where step_index % (N + 1) == 0 are processed, all others are skipped "
+            "only steps where step_index %% (N + 1) == 0 are processed, all others are skipped "
             f"(e.g., 0 = no skipping; 1 = skip every other step; 2 = skip 2 of every 3 steps; "
             f"default: {DEFAULT_AUDIO_GUIDER_PARAMS.skip_step})."
         ),
@@ -319,10 +325,9 @@ def default_1_stage_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def default_2_stage_arg_parser() -> argparse.ArgumentParser:
-    parser = default_1_stage_arg_parser()
+def default_2_stage_arg_parser(cli_model_paths_raw: bool = False) -> argparse.ArgumentParser:
+    parser = default_1_stage_arg_parser(cli_model_paths_raw=cli_model_paths_raw)
     parser.set_defaults(height=DEFAULT_2_STAGE_HEIGHT, width=DEFAULT_2_STAGE_WIDTH)
-    # Update help text to reflect 2-stage defaults
     for action in parser._actions:
         if "--height" in action.option_strings:
             action.help = (
@@ -333,38 +338,36 @@ def default_2_stage_arg_parser() -> argparse.ArgumentParser:
             action.help = (
                 f"Width of the generated video in pixels, should be divisible by 64 (default: {DEFAULT_2_STAGE_WIDTH})."
             )
+    path_type_2: object = str if cli_model_paths_raw else resolve_path
     parser.add_argument(
         "--distilled-lora",
         dest="distilled_lora",
         action=LoraAction,
-        nargs="+",  # Accept 1-2 arguments per use (path and optional strength); validation is handled in LoraAction
+        use_raw_path=cli_model_paths_raw,
+        nargs="+",
         metavar=("PATH", "STRENGTH"),
         required=True,
         help=(
             "Distilled LoRA (Low-Rank Adaptation) model used in the second stage (upscaling and refinement): "
             f"path to model file and optional strength (default strength: {DEFAULT_LORA_STRENGTH}). "
-            "The second stage upsamples the video by 2x resolution and refines it using a distilled "
-            "denoising schedule (fewer steps, no CFG). The distilled LoRA is specifically trained "
-            "for this refinement process to improve quality at higher resolutions. "
             "Example: --distilled-lora path/to/distilled_lora.safetensors 0.8"
         ),
     )
     parser.add_argument(
         "--spatial-upsampler-path",
-        type=resolve_path,
+        type=path_type_2,
         required=True,
         help=(
-            "Path to the spatial upsampler model used to increase the resolution "
-            "of the generated video in the latent space."
+            "Path to the spatial upsampler model or HuggingFace repo (e.g. repo_id:filename). "
+            "Increases the resolution of the generated video in the latent space."
         ),
     )
     return parser
 
 
-def default_2_stage_distilled_arg_parser() -> argparse.ArgumentParser:
-    parser = basic_arg_parser()
+def default_2_stage_distilled_arg_parser(cli_model_paths_raw: bool = False) -> argparse.ArgumentParser:
+    parser = basic_arg_parser(cli_model_paths_raw=cli_model_paths_raw)
     parser.set_defaults(height=DEFAULT_2_STAGE_HEIGHT, width=DEFAULT_2_STAGE_WIDTH)
-    # Update help text to reflect 2-stage defaults
     for action in parser._actions:
         if "--height" in action.option_strings:
             action.help = (
@@ -375,13 +378,14 @@ def default_2_stage_distilled_arg_parser() -> argparse.ArgumentParser:
             action.help = (
                 f"Width of the generated video in pixels, should be divisible by 64 (default: {DEFAULT_2_STAGE_WIDTH})."
             )
+    path_type_d: object = str if cli_model_paths_raw else resolve_path
     parser.add_argument(
         "--spatial-upsampler-path",
-        type=resolve_path,
+        type=path_type_d,
         required=True,
         help=(
-            "Path to the spatial upsampler model used to increase the resolution "
-            "of the generated video in the latent space."
+            "Path to the spatial upsampler model or HuggingFace repo (e.g. repo_id:filename). "
+            "Increases the resolution of the generated video in the latent space."
         ),
     )
     return parser

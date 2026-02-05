@@ -298,17 +298,7 @@ class ICLoraPipeline:
 
 
 @torch.inference_mode()
-def main() -> None:
-    logging.getLogger().setLevel(logging.INFO)
-    parser = default_2_stage_distilled_arg_parser()
-    parser.add_argument(
-        "--video-conditioning",
-        action=VideoConditioningAction,
-        nargs=2,
-        metavar=("PATH", "STRENGTH"),
-        required=True,
-    )
-    args = parser.parse_args()
+def _run_ic_lora(args: object) -> None:
     pipeline = ICLoraPipeline(
         checkpoint_path=args.checkpoint_path,
         spatial_upsampler_path=args.spatial_upsampler_path,
@@ -329,7 +319,6 @@ def main() -> None:
         video_conditioning=args.video_conditioning,
         tiling_config=tiling_config,
     )
-
     encode_video(
         video=video,
         fps=args.frame_rate,
@@ -338,6 +327,21 @@ def main() -> None:
         output_path=args.output_path,
         video_chunks_number=video_chunks_number,
     )
+
+
+@torch.inference_mode()
+def main() -> None:
+    logging.getLogger().setLevel(logging.INFO)
+    parser = default_2_stage_distilled_arg_parser()
+    parser.add_argument(
+        "--video-conditioning",
+        action=VideoConditioningAction,
+        nargs=2,
+        metavar=("PATH", "STRENGTH"),
+        required=True,
+    )
+    args = parser.parse_args()
+    _run_ic_lora(args)
 
 
 def _read_lora_reference_downscale_factor(lora_path: str) -> int:

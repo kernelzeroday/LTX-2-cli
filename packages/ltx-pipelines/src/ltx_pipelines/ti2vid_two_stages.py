@@ -241,10 +241,7 @@ class TI2VidTwoStagesPipeline:
 
 
 @torch.inference_mode()
-def main() -> None:
-    logging.getLogger().setLevel(logging.INFO)
-    parser = default_2_stage_arg_parser()
-    args = parser.parse_args()
+def _run_two_stages(args: object) -> None:
     pipeline = TI2VidTwoStagesPipeline(
         checkpoint_path=args.checkpoint_path,
         distilled_lora=args.distilled_lora,
@@ -282,8 +279,8 @@ def main() -> None:
         ),
         images=args.images,
         tiling_config=tiling_config,
+        enhance_prompt=getattr(args, "enhance_prompt", False),
     )
-
     encode_video(
         video=video,
         fps=args.frame_rate,
@@ -292,6 +289,14 @@ def main() -> None:
         output_path=args.output_path,
         video_chunks_number=video_chunks_number,
     )
+
+
+@torch.inference_mode()
+def main() -> None:
+    logging.getLogger().setLevel(logging.INFO)
+    parser = default_2_stage_arg_parser()
+    args = parser.parse_args()
+    _run_two_stages(args)
 
 
 if __name__ == "__main__":
